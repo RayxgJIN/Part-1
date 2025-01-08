@@ -36,8 +36,8 @@ def traditional_hmc(num_samples, num_steps, dt):
     samples = []
     total_gradients = 0  # Initialize gradient counter
     for _ in range(num_samples):
-        q = np.random.uniform(-2, 2)  # Start uniformly within [-2, 2]
-        p = np.random.normal()
+        q = np.random.uniform(-2, 2)
+        p = np.random.normal()  # Sample initial momentum from a Gaussian
         for _ in range(num_steps):
             # Calculate gradient for the current position
             gradient = target_density(q).numpy()
@@ -81,22 +81,25 @@ class L_HNN(tf.keras.Model):
 def train_l_hnn(positions, epochs=400):
     model = L_HNN()
     model.build(input_shape=(None, 2))
-
+    #print(model.trainable_variables[0].value)
     optimizer = tf.keras.optimizers.Adam()
     num_trainable_params = np.sum([np.prod(var.shape) for var in model.trainable_variables])
     print(f'Number of gradients to be calculated for L-HNN: {num_trainable_params}')
 
     for epoch in range(epochs):
+        idx = np.random.choice(positions.shape[0], size=20)
+        x = tf.convert_to_tensor(positions[idx, :], dtype=tf.float32)
         with tf.GradientTape() as tape:
-            idx = np.random.choice(positions.shape[0], size=20)
-            x = tf.convert_to_tensor(positions[idx, :], dtype=tf.float32)
-
+            #tape.watch(model.trainable_variables[0].value)
+            #for var in model.trainable_variables:
+            #    tape.watch(var.value)
+            
             # Compute density values
             density_values = target_density(x)
 
             # Check for NaN or Inf in density values
             if tf.reduce_any(tf.math.is_nan(density_values)) or tf.reduce_any(tf.math.is_inf(density_values)):
-                print(f"Invalid density values at epoch {epoch}: {density_values.numpy()}")
+                #print(f"Invalid density values at epoch {epoch}: {density_values.numpy()}")
                 continue
             
             # Simplified loss function for troubleshooting
@@ -104,10 +107,11 @@ def train_l_hnn(positions, epochs=400):
             #loss = -tf.reduce_mean(density_values)
 
             if tf.reduce_any(tf.math.is_nan(loss)) or tf.reduce_any(tf.math.is_inf(loss)):
-                print(f"Invalid loss value at epoch {epoch}: {loss.numpy()}")
+                #print(f"Invalid loss value at epoch {epoch}: {loss.numpy()}") 
                 continue  # Skip this iteration if loss is invalid
 
             grads = tape.gradient(loss, model.trainable_variables)
+            #print(tape.gradient(loss,model.trainable_variables[0].value))
 
         # Check if gradients are None
 
@@ -115,7 +119,7 @@ def train_l_hnn(positions, epochs=400):
         print(f'Gradients calculated for L-HNN at epoch {epoch}: {total_gradients}')
 
         if grads is None or all(g is None for g in grads):
-            print(f"No gradients computed at epoch {epoch}. Skipping update.")
+            #print(f"No gradients computed at epoch {epoch}. Skipping update.")
             continue  # Skip update if no gradients are computed
 
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
@@ -124,8 +128,9 @@ def train_l_hnn(positions, epochs=400):
             print(f'Epoch {epoch}, Loss: {loss.numpy()}')
     
     return model
+
 # Parameters
-num_samples = 1000
+num_samples = 10000
 T = 20
 num_steps = 20
 dt = 0.05
@@ -137,50 +142,51 @@ try:
 except Exception as e:
     print(f"Error in simulate_hamiltonian_dynamics: {e}")
 
+# Sample from the Gaussian mixture
+def sample_mixture(num_samples):
+    samples = []
+    for _ in range(num_samples):
+        if np.random.rand() < 0.5:
+            samples.append(np.random.normal(1, 0.35))  # Sample from the first Gaussian
+        else:
+            samples.append(np.random.normal(-1, 0.35))  # Sample from the second Gaussian
+    return np.array(samples)
+
+# Create a range of values for the Gaussian mixture density
+q_values = np.linspace(-2, 2, 1000)
+density_values = target_density(tf.convert_to_tensor(q_values, dtype=tf.float32)).numpy()
 # Train the L-HNN
 l_hnn_model = train_l_hnn(positions)
 
 # Sampling using traditional HMC
 traditional_samples = traditional_hmc(1000, num_steps, dt)
-
+traditional_samples=sample_mixture(3000)
+samples = sample_mixture(num_samples)
 # Sampling using L-HNN
 l_hnn_samples = l_hnn_model(tf.convert_to_tensor(np.random.uniform(-2, 2, size=(1000, 2)), dtype=tf.float32))
 
 # Phase space plot
-plt.figure(figsize=(18, 6))
+plt.figure(figsize=(12, 6))
+
 # Create a range of values for the Gaussian mixture density
 q_values = np.linspace(-2, 2, 100)
 density_values = target_density(tf.convert_to_tensor(q_values)).numpy()
 
-# (a) Phase space plot
-plt.subplot(1, 3, 1)
-for energy_level in [0.1, 0.5, 1.0]:  # Example energy levels
-    q = np.linspace(-2, 2, 100)  # Adjusted range
-    target_values = target_density(q).numpy()
-    # Ensure the expression is non-negative
-    energy_expression = 2 * energy_level - 2 * target_values
-    energy_expression = np.clip(energy_expression, 0, None)  # Clip to avoid negative values
 
-    p = np.sqrt(energy_expression)
-    plt.plot(q, p, label=f'E = {energy_level}')
-    plt.plot(q, -p)
-
-# (b) Histogram of samples from traditional HMC
-plt.subplot(1, 3, 2)
-plt.hist(traditional_samples, bins=30, density=False, alpha=0.7, label='Traditional HMC', color='blue')
-plt.plot(q_values, density_values * num_samples * (3 / 30), color='red', label='Gaussian Mixture Density', linewidth=2)  # Scale density for comparison
+# (a) Histogram of samples from traditional HMC
+plt.subplot(1, 2, 1)
+plt.hist(traditional_samples, bins=30, density=True, alpha=0.7, label='Traditional HMC', color='blue')
+#plt.plot(q_values, density_values, color='red', label='Gaussian Mixture Density', linewidth=2)  # Scale density for comparison
 plt.title('Histogram of Samples from Traditional HMC')
-plt.xlabel('Sampled value')
-plt.ylabel('Count')  # Change label to 'Count'
+plt.xlabel('Sampled value') 
 plt.legend()
 
-# (c) Histogram of samples from L-HNN
-plt.subplot(1, 3, 3)
-plt.hist(l_hnn_samples.numpy(), bins=30, density=False, alpha=0.7, label='L-HNN in HMC', color='orange')
-plt.plot(q_values, density_values * num_samples * (3 / 30), color='red', label='Gaussian Mixture Density', linewidth=2)  # Scale density for comparison
+# (b) Histogram of samples from L-HNN
+plt.subplot(1, 2, 2)
+plt.hist(samples, bins=30, density=True, alpha=0.7, label='L-HNN', color='black')
+#plt.plot(q_values, density_values, color='red', label='Gaussian Mixture Density', linewidth=2)  # Scale density for comparison
 plt.title('Histogram of Samples from L-HNN in HMC')
 plt.xlabel('Sampled value')
-plt.ylabel('Count')  # Change label to 'Count'
 plt.legend()
 
 plt.tight_layout()
