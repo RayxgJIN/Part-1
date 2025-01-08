@@ -7,13 +7,13 @@ This repository contains the literature review and test results related to Hamil
 ## Contents
 
 - **File: [Report 1.pdf](./Report%201.pdf)**  
-  Contains the literature review of HMM (Hidden Markov Models) and HNN methods, along with test results based on Question 1.
+  Contains the literature review of HMC and HNN methods, along with test results based on Question 1.
 
 - **Folder: [TensorFlow](./Tensorflow)**  
-  Includes implementation code for HMM and HNN using TensorFlow.
+  Includes implementation code for HMC and HNN using TensorFlow.
 
 - **Folder: [PyTorch](./Pytorch)**  
-  Contains implementation code for HMM and HNN using PyTorch, based on the code from Question 1.
+  Contains implementation code for HMC and HNN using PyTorch, based on the code from Question 1.
 
 ## Reference
 
