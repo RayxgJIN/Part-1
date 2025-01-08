@@ -3,10 +3,6 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import matplotlib.pyplot as plt
 
-# Define the new potential energy function based on the specified density
-import numpy as np
-import tensorflow as tf
-import tensorflow_probability as tfp
 
 # Define the potential energy function based on the specified density
 def potential_energy_custom(coords):
