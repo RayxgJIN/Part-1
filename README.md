@@ -10,7 +10,7 @@ This repository contains the literature review and test results related to Hamil
   Contains the literature review of HMC and HNN methods, along with test results based on Question 1.
 
 - **Folder: [TensorFlow](./Tensorflow)**  
-  Includes implementation code for HMC and HNN using TensorFlow.
+  Includes implementation code for HMC and HNN using TensorFlow. (Try hmc.ipynb. first!)
 
 - **Folder: [PyTorch](./Pytorch)**  
   Contains implementation code for HMC and HNN using PyTorch, based on the code from Question 1.
